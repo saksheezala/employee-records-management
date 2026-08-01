@@ -5,12 +5,12 @@ resource "azurerm_postgresql_flexible_server" "main" {
   version                = "15"
   administrator_login    = "eradmin"
   administrator_password = var.db_password # Pulled directly from Key Vault output!
-  
+
   # Cost Optimization: Burstable B1ms is the cheapest tier (approx $14/month)
   sku_name   = "B_Standard_B1ms"
   storage_mb = 32768 # 32 GB is the minimum
 
-  
+
   tags = {
     environment = "production"
   }

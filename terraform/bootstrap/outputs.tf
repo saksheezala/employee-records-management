@@ -15,7 +15,7 @@ output "container_name" {
 
 output "backend_config" {
   description = "Snippet for configuring the remote backend in terraform/infra/backend.tf"
-  value = <<EOT
+  value       = <<EOT
 terraform {
   backend "azurerm" {
     resource_group_name  = "${azurerm_resource_group.tfstate.name}"

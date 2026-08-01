@@ -34,10 +34,10 @@ module "postgres" {
   prefix              = var.prefix
   location            = var.location
   resource_group_name = module.resource_group.name
-  
+
   # Perfect example of Top-Down data flow: Grabbing the generated password 
   # from the key_vault module output and passing it into the postgres module!
-  db_password         = module.key_vault.db_password
+  db_password = module.key_vault.db_password
 }
 
 module "app_service_plan" {
@@ -53,13 +53,13 @@ module "backend_app" {
   location            = var.location
   resource_group_name = module.resource_group.name
   app_service_plan_id = module.app_service_plan.plan_id
-  
+
   database_connection_string = module.postgres.connection_string
   key_vault_uri              = module.key_vault.key_vault_uri
   key_vault_id               = module.key_vault.key_vault_id
   storage_account_name       = module.storage.storage_account_name
   storage_container_name     = module.storage.photos_container_name
-  
+
   app_insights_instrumentation_key = module.monitoring.app_insights_instrumentation_key
   app_insights_connection_string   = module.monitoring.app_insights_connection_string
   acr_login_server                 = module.acr.acr_login_server
@@ -71,7 +71,7 @@ module "frontend_app" {
   location            = var.location
   resource_group_name = module.resource_group.name
   app_service_plan_id = module.app_service_plan.plan_id
-  
+
   # Injecting the Backend URL into the Frontend App!
   backend_hostname                 = module.backend_app.default_hostname
   app_insights_instrumentation_key = module.monitoring.app_insights_instrumentation_key

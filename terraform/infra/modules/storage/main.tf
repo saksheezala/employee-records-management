@@ -17,10 +17,10 @@ resource "azurerm_storage_account" "app_storage" {
 
 # The specific container to hold employee profile photos
 resource "azurerm_storage_container" "photos" {
-  name                  = "profile-photos"
-  storage_account_name  = azurerm_storage_account.app_storage.name
-  
+  name                 = "profile-photos"
+  storage_account_name = azurerm_storage_account.app_storage.name
+
   # Set to private. The backend will generate Shared Access Signature (SAS) tokens
   # so that users can download their photos securely.
-  container_access_type = "private" 
+  container_access_type = "private"
 }

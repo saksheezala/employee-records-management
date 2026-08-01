@@ -18,8 +18,8 @@ resource "azurerm_linux_web_app" "main" {
   }
 
   app_settings = {
-    "WEBSITES_ENABLE_APP_SERVICE_STORAGE"   = "false"
-    "WEBSITES_PORT"                         = "5173"
+    "WEBSITES_ENABLE_APP_SERVICE_STORAGE" = "false"
+    "WEBSITES_PORT"                       = "5173"
     # Provide the React app with the Backend API URL!
     "VITE_API_URL"                          = "https://${var.backend_hostname}"
     "APPINSIGHTS_INSTRUMENTATIONKEY"        = var.app_insights_instrumentation_key
