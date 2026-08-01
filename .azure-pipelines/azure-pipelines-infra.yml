@@ -37,14 +37,18 @@ stages:
         inlineScript: |
           set -e
           
-          # Expose Service Principal credentials to Terraform
+          # Capture credentials and subscription ID while the CLI session is still active
           export ARM_CLIENT_ID=$servicePrincipalId
           export ARM_CLIENT_SECRET=$servicePrincipalKey
           export ARM_TENANT_ID=$tenantId
           export ARM_SUBSCRIPTION_ID=$(az account show --query id -o tsv)
-          
-          # Force Terraform to use the Service Principal env vars instead of the Azure CLI session
           export ARM_USE_CLI=false
+
+          # Log out of the Azure CLI so Terraform cannot fall back to the SPN CLI session.
+          # Terraform only supports CLI auth for User accounts, not Service Principals.
+          # After logout, Terraform will authenticate exclusively via ARM_* env vars above.
+          az logout || true
+          az account clear || true
 
           cd $(terraformWorkingDirectory)
           terraform init -input=false
@@ -101,13 +105,16 @@ stages:
         inlineScript: |
           set -e
 
+          # Capture credentials and subscription ID while the CLI session is still active
           export ARM_CLIENT_ID=$servicePrincipalId
           export ARM_CLIENT_SECRET=$servicePrincipalKey
           export ARM_TENANT_ID=$tenantId
           export ARM_SUBSCRIPTION_ID=$(az account show --query id -o tsv)
-          
-          # Force Terraform to use the Service Principal env vars instead of the Azure CLI session
           export ARM_USE_CLI=false
+
+          # Log out of the Azure CLI so Terraform cannot fall back to the SPN CLI session.
+          az logout || true
+          az account clear || true
 
           cd $(terraformWorkingDirectory)
           terraform init -input=false
