@@ -1,0 +1,136 @@
+trigger:
+  branches:
+    include:
+      - main
+  paths:
+    exclude:
+      - terraform/**
+      - .azure-pipelines/azure-pipelines-infra.yml
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+variables:
+  azureServiceConnection: 'AzureConnection'
+  containerRegistry: 'erprodacr.azurecr.io'
+  frontendImageName: 'frontend'
+  backendImageName: 'backend'
+  tag: '$(Build.BuildId)'
+  # Hardcoding names based on Terraform for simplicity in this example
+  resourceGroup: 'erprod-rg'
+  backendAppName: 'erprod-api'
+  frontendAppName: 'erprod-ui'
+  backendUrl: 'https://erprod-api.azurewebsites.net'
+  keyVaultName: 'erprod-kv'
+  databaseHost: 'erprod-pg.postgres.database.azure.com'
+
+stages:
+- stage: CI
+  displayName: 'Continuous Integration'
+  jobs:
+  - job: BuildBackend
+    displayName: 'Build Backend'
+    steps:
+    - task: NodeTool@0
+      inputs:
+        versionSpec: '20.x'
+    - script: |
+        cd backend
+        npm ci
+        npm run build
+      displayName: 'Install and Build Backend'
+
+  - job: BuildFrontend
+    displayName: 'Build & Lint Frontend'
+    steps:
+    - task: NodeTool@0
+      inputs:
+        versionSpec: '20.x'
+    - script: |
+        cd frontend
+        npm ci
+        npm run lint
+        npm run build
+      displayName: 'Install, Lint, and Build Frontend'
+
+- stage: BuildAndPushDocker
+  displayName: 'Build and Push Docker Images'
+  dependsOn: CI
+  condition: succeeded()
+  jobs:
+  - job: BuildAndPush
+    steps:
+    - task: Docker@2
+      displayName: 'Build & Push Backend Image'
+      inputs:
+        containerRegistry: '$(azureServiceConnection)' # Assuming Service Connection supports Docker
+        repository: '$(backendImageName)'
+        command: 'buildAndPush'
+        Dockerfile: 'backend/Dockerfile'
+        buildContext: 'backend'
+        tags: |
+          $(tag)
+    
+    - task: Docker@2
+      displayName: 'Build & Push Frontend Image'
+      inputs:
+        containerRegistry: '$(azureServiceConnection)'
+        repository: '$(frontendImageName)'
+        command: 'buildAndPush'
+        Dockerfile: 'frontend/Dockerfile'
+        buildContext: 'frontend'
+        arguments: '--build-arg VITE_API_URL=$(backendUrl)'
+        tags: |
+          $(tag)
+
+- stage: Deploy
+  displayName: 'Deploy to Production'
+  dependsOn: BuildAndPushDocker
+  condition: succeeded()
+  jobs:
+  - job: DeployJob
+    steps:
+    - task: AzureKeyVault@2
+      inputs:
+        azureSubscription: '$(azureServiceConnection)'
+        KeyVaultName: '$(keyVaultName)'
+        SecretsFilter: 'DatabasePassword'
+        RunAsPreJob: false
+
+    - task: NodeTool@0
+      inputs:
+        versionSpec: '20.x'
+
+    - script: |
+        cd backend
+        npm install prisma
+        npx prisma migrate deploy
+      displayName: 'Run Database Migrations'
+      env:
+        # Construct DATABASE_URL using the password fetched from Key Vault
+        DATABASE_URL: "postgres://eradmin:$(DatabasePassword)@$(databaseHost):5432/employeedb?sslmode=require"
+
+    - task: AzureWebAppContainer@1
+      displayName: 'Deploy Backend to App Service'
+      inputs:
+        azureSubscription: '$(azureServiceConnection)'
+        appName: '$(backendAppName)'
+        containers: '$(containerRegistry)/$(backendImageName):$(tag)'
+
+    - task: AzureWebAppContainer@1
+      displayName: 'Deploy Frontend to App Service'
+      inputs:
+        azureSubscription: '$(azureServiceConnection)'
+        appName: '$(frontendAppName)'
+        containers: '$(containerRegistry)/$(frontendImageName):$(tag)'
+
+    - script: |
+        echo "Waiting for services to spin up..."
+        sleep 30
+        HTTP_STATUS=$(curl -o /dev/null -s -w "%{http_code}\n" $(backendUrl)/health)
+        echo "Backend returned HTTP Status: $HTTP_STATUS"
+        if [ "$HTTP_STATUS" -ne 200 ]; then
+          echo "Health check failed!"
+          exit 1
+        fi
+      displayName: 'Verify /health endpoint'

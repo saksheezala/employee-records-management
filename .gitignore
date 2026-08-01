@@ -1,0 +1,29 @@
+# Node
+node_modules/
+
+# Environment
+.env
+.env.*
+
+# Logs
+*.log
+
+# Terraform
+.terraform/
+*.tfstate
+*.tfstate.*
+crash.log
+
+# OS
+.DS_Store
+
+# Build
+dist/
+build/
+
+# Uploads
+backend/uploads/
+
+# IDE
+.vscode/
+.idea/

@@ -1,0 +1,75 @@
+trigger:
+  branches:
+    include:
+      - main
+  paths:
+    include:
+      - terraform/**
+
+pool:
+  vmImage: 'ubuntu-latest'
+
+variables:
+  azureServiceConnection: 'AzureConnection'
+  terraformWorkingDirectory: 'terraform/infra'
+
+stages:
+- stage: TerraformPlan
+  displayName: 'Terraform Plan'
+  jobs:
+  - job: Plan
+    displayName: 'Init, Validate, and Plan'
+    steps:
+    - task: TerraformInstaller@1
+      inputs:
+        terraformVersion: 'latest'
+
+    - task: AzureCLI@2
+      displayName: 'Terraform Init and Plan'
+      inputs:
+        azureSubscription: '$(azureServiceConnection)'
+        scriptType: 'bash'
+        scriptLocation: 'inlineScript'
+        inlineScript: |
+          cd $(terraformWorkingDirectory)
+          terraform init
+          terraform validate
+          terraform plan -out=tfplan
+          
+          # In a full enterprise setup, this plan would be published as a pipeline artifact
+          # and downloaded in the Apply stage to guarantee the exact same plan is applied.
+
+- stage: TerraformApply
+  displayName: 'Terraform Apply'
+  dependsOn: TerraformPlan
+  # Only run apply on main branch
+  condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
+  jobs:
+  - job: WaitForApproval
+    displayName: 'Manual Approval'
+    pool: server # Agentless job for manual validation
+    steps:
+    - task: ManualValidation@0
+      timeoutInMinutes: 60
+      inputs:
+        notifyUsers: ''
+        instructions: 'Please review the Terraform Plan output in the previous stage. Approve to apply the changes.'
+  
+  - job: Apply
+    displayName: 'Apply Infrastructure'
+    dependsOn: WaitForApproval
+    steps:
+    - checkout: self
+    - task: TerraformInstaller@1
+      inputs:
+        terraformVersion: 'latest'
+    - task: AzureCLI@2
+      displayName: 'Terraform Apply'
+      inputs:
+        azureSubscription: '$(azureServiceConnection)'
+        scriptType: 'bash'
+        scriptLocation: 'inlineScript'
+        inlineScript: |
+          cd $(terraformWorkingDirectory)
+          terraform init
+          terraform apply -auto-approve
