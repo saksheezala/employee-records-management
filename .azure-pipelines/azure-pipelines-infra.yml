@@ -10,8 +10,11 @@ pool:
   vmImage: 'ubuntu-latest'
 
 variables:
-  azureServiceConnection: 'AzureConnection'
-  terraformWorkingDirectory: 'terraform/infra'
+  - group: Dev
+  - name: azureServiceConnection
+    value: 'AzureConnection'
+  - name: terraformWorkingDirectory
+    value: 'terraform/infra'
 
 stages:
 - stage: TerraformPlan
@@ -22,7 +25,7 @@ stages:
     steps:
     - task: TerraformInstaller@1
       inputs:
-        terraformVersion: 'latest'
+        terraformVersion: '1.5.7'
 
     - task: AzureCLI@2
       displayName: 'Terraform Init and Plan'
@@ -32,12 +35,17 @@ stages:
         scriptLocation: 'inlineScript'
         inlineScript: |
           cd $(terraformWorkingDirectory)
-          terraform init
+          terraform init -input=false
+          terraform fmt -check
           terraform validate
-          terraform plan -out=tfplan
-          
-          # In a full enterprise setup, this plan would be published as a pipeline artifact
-          # and downloaded in the Apply stage to guarantee the exact same plan is applied.
+          terraform plan -input=false -out=tfplan
+
+    - task: PublishPipelineArtifact@1
+      displayName: 'Publish tfplan Artifact'
+      inputs:
+        targetPath: '$(terraformWorkingDirectory)/tfplan'
+        artifact: 'tfplan'
+        publishLocation: 'pipeline'
 
 - stage: TerraformApply
   displayName: 'Terraform Apply'
@@ -60,9 +68,17 @@ stages:
     dependsOn: WaitForApproval
     steps:
     - checkout: self
+    
     - task: TerraformInstaller@1
       inputs:
-        terraformVersion: 'latest'
+        terraformVersion: '1.5.7'
+
+    - task: DownloadPipelineArtifact@2
+      displayName: 'Download tfplan Artifact'
+      inputs:
+        artifact: 'tfplan'
+        path: '$(terraformWorkingDirectory)'
+
     - task: AzureCLI@2
       displayName: 'Terraform Apply'
       inputs:
@@ -71,5 +87,5 @@ stages:
         scriptLocation: 'inlineScript'
         inlineScript: |
           cd $(terraformWorkingDirectory)
-          terraform init
-          terraform apply -auto-approve
+          terraform init -input=false
+          terraform apply -auto-approve tfplan

@@ -1,5 +1,3 @@
-
-
 resource "azurerm_key_vault" "main" {
   name                        = "${var.prefix}-kv"
   location                    = var.location
@@ -10,21 +8,15 @@ resource "azurerm_key_vault" "main" {
   purge_protection_enabled    = false # Set to false for easier teardown during development
   sku_name                    = "standard"
 
-  # Access policy for the user executing Terraform
-  access_policy {
-    tenant_id = var.tenant_id
-    object_id = var.object_id
+  # Enable modern Azure RBAC authorization model instead of legacy access policies
+  enable_rbac_authorization   = true
+}
 
-    secret_permissions = [
-      "Get", "List", "Set", "Delete", "Recover", "Backup", "Restore", "Purge"
-    ]
-  }
-
-  lifecycle {
-    ignore_changes = [
-      access_policy
-    ]
-  }
+# Grant the Terraform executing user administrative access to the Key Vault
+resource "azurerm_role_assignment" "current_user_kv_admin" {
+  scope                = azurerm_key_vault.main.id
+  role_definition_name = "Key Vault Administrator"
+  principal_id         = var.object_id
 }
 
 # Generate a strong random password for the PostgreSQL database
@@ -45,6 +37,9 @@ resource "azurerm_key_vault_secret" "db_password" {
   name         = "DatabasePassword"
   value        = random_password.db_password.result
   key_vault_id = azurerm_key_vault.main.id
+  
+  # Ensure Terraform is granted RBAC permissions BEFORE attempting to write secrets
+  depends_on   = [azurerm_role_assignment.current_user_kv_admin]
 }
 
 # Store the JWT secret in Key Vault
@@ -52,4 +47,6 @@ resource "azurerm_key_vault_secret" "jwt_secret" {
   name         = "JwtSecret"
   value        = random_password.jwt_secret.result
   key_vault_id = azurerm_key_vault.main.id
+
+  depends_on   = [azurerm_role_assignment.current_user_kv_admin]
 }

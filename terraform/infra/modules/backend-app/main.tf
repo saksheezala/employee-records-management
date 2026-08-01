@@ -23,6 +23,7 @@ resource "azurerm_linux_web_app" "main" {
     "WEBSITES_PORT"                         = "3000"
     "DATABASE_URL"                          = var.database_connection_string
     "KEY_VAULT_URI"                         = var.key_vault_uri
+    "JWT_SECRET"                            = "@Microsoft.KeyVault(SecretUri=${var.key_vault_uri}secrets/JwtSecret/)"
     "STORAGE_ACCOUNT_NAME"                  = var.storage_account_name
     "STORAGE_CONTAINER_NAME"                = var.storage_container_name
     "APPINSIGHTS_INSTRUMENTATIONKEY"        = var.app_insights_instrumentation_key
@@ -41,14 +42,9 @@ resource "azurerm_linux_web_app" "main" {
   }
 }
 
-# Grant the App Service's Managed Identity read access to Key Vault
-resource "azurerm_key_vault_access_policy" "backend_kv_access" {
-  key_vault_id = var.key_vault_id
-  tenant_id    = azurerm_linux_web_app.main.identity[0].tenant_id
-  object_id    = azurerm_linux_web_app.main.identity[0].principal_id
-
-  secret_permissions = [
-    "Get",
-    "List",
-  ]
+# Grant the App Service's Managed Identity Key Vault Secrets User access via RBAC
+resource "azurerm_role_assignment" "backend_kv_secrets_user" {
+  scope                = var.key_vault_id
+  role_definition_name = "Key Vault Secrets User"
+  principal_id         = azurerm_linux_web_app.main.identity[0].principal_id
 }
