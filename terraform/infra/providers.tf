@@ -12,15 +12,9 @@ terraform {
 }
 
 # Explicit Service Principal authentication.
-# Credentials are passed via TF_VAR_* environment variables in CI/CD.
-# This guarantees Terraform never falls back to Azure CLI session auth,
-# which is unsupported for Service Principals.
+# Credentials are injected via ARM_* environment variables in CI/CD.
+# use_cli = false ensures the provider never touches the Azure CLI session.
 provider "azurerm" {
   features {}
-
-  use_cli         = false
-  subscription_id = var.arm_subscription_id
-  tenant_id       = var.arm_tenant_id
-  client_id       = var.arm_client_id
-  client_secret   = var.arm_client_secret
+  use_cli = false
 }

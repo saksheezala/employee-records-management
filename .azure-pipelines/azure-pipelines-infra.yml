@@ -27,36 +27,27 @@ stages:
       inputs:
         terraformVersion: '1.5.7'
 
-    # Step 1: Use AzureCLI@2 ONLY to extract SPN credentials and export them
-    # as pipeline variables. The task automatically runs 'az account clear'
-    # on exit, so the CLI session is gone before Step 2 runs.
     - task: AzureCLI@2
-      displayName: 'Extract Azure Credentials'
+      displayName: 'Terraform Init and Plan'
       inputs:
         azureSubscription: '$(azureServiceConnection)'
         addSpnToEnvironment: true
         scriptType: 'bash'
         scriptLocation: 'inlineScript'
         inlineScript: |
-          echo "##vso[task.setvariable variable=TF_ARM_CLIENT_ID]$servicePrincipalId"
-          echo "##vso[task.setvariable variable=TF_ARM_CLIENT_SECRET;issecret=true]$servicePrincipalKey"
-          echo "##vso[task.setvariable variable=TF_ARM_TENANT_ID]$tenantId"
-          echo "##vso[task.setvariable variable=TF_ARM_SUBSCRIPTION_ID]$(az account show --query id -o tsv)"
-
-    # Step 2: Run Terraform in a plain Bash task with NO active Azure CLI session.
-    # TF_VAR_* env vars are passed directly into the provider block via Terraform variables.
-    # This is the most explicit auth method: Terraform reads no CLI session, no ARM_ env discovery.
-    - task: Bash@3
-      displayName: 'Terraform Init and Plan'
-      env:
-        TF_VAR_arm_client_id: $(TF_ARM_CLIENT_ID)
-        TF_VAR_arm_client_secret: $(TF_ARM_CLIENT_SECRET)
-        TF_VAR_arm_tenant_id: $(TF_ARM_TENANT_ID)
-        TF_VAR_arm_subscription_id: $(TF_ARM_SUBSCRIPTION_ID)
-      inputs:
-        targetType: 'inline'
-        script: |
           set -e
+
+          # Capture credentials and subscription ID while the CLI session is active
+          export ARM_CLIENT_ID=$servicePrincipalId
+          export ARM_CLIENT_SECRET=$servicePrincipalKey
+          export ARM_TENANT_ID=$tenantId
+          export ARM_SUBSCRIPTION_ID=$(az account show --query id -o tsv)
+
+          # Redirect Azure CLI config to a fresh empty temp directory.
+          # Terraform will find no active CLI session and will authenticate
+          # exclusively via the ARM_* environment variables set above.
+          export AZURE_CONFIG_DIR=$(mktemp -d)
+
           cd $(terraformWorkingDirectory)
           terraform init -input=false
           terraform fmt -check
@@ -102,32 +93,26 @@ stages:
         artifact: 'tfplan'
         path: '$(terraformWorkingDirectory)'
 
-    # Step 1: Extract SPN credentials for the Apply stage
     - task: AzureCLI@2
-      displayName: 'Extract Azure Credentials'
+      displayName: 'Terraform Apply'
       inputs:
         azureSubscription: '$(azureServiceConnection)'
         addSpnToEnvironment: true
         scriptType: 'bash'
         scriptLocation: 'inlineScript'
         inlineScript: |
-          echo "##vso[task.setvariable variable=TF_ARM_CLIENT_ID]$servicePrincipalId"
-          echo "##vso[task.setvariable variable=TF_ARM_CLIENT_SECRET;issecret=true]$servicePrincipalKey"
-          echo "##vso[task.setvariable variable=TF_ARM_TENANT_ID]$tenantId"
-          echo "##vso[task.setvariable variable=TF_ARM_SUBSCRIPTION_ID]$(az account show --query id -o tsv)"
-
-    # Step 2: Apply using the exact tfplan from the Plan stage (no CLI session active)
-    - task: Bash@3
-      displayName: 'Terraform Apply'
-      env:
-        TF_VAR_arm_client_id: $(TF_ARM_CLIENT_ID)
-        TF_VAR_arm_client_secret: $(TF_ARM_CLIENT_SECRET)
-        TF_VAR_arm_tenant_id: $(TF_ARM_TENANT_ID)
-        TF_VAR_arm_subscription_id: $(TF_ARM_SUBSCRIPTION_ID)
-      inputs:
-        targetType: 'inline'
-        script: |
           set -e
+
+          # Capture credentials and subscription ID while the CLI session is active
+          export ARM_CLIENT_ID=$servicePrincipalId
+          export ARM_CLIENT_SECRET=$servicePrincipalKey
+          export ARM_TENANT_ID=$tenantId
+          export ARM_SUBSCRIPTION_ID=$(az account show --query id -o tsv)
+
+          # Redirect Azure CLI config to a fresh empty temp directory.
+          # Terraform will find no active CLI session and authenticate via ARM_* env vars.
+          export AZURE_CONFIG_DIR=$(mktemp -d)
+
           cd $(terraformWorkingDirectory)
           terraform init -input=false
           terraform apply -auto-approve tfplan
