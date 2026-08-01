@@ -27,29 +27,36 @@ stages:
       inputs:
         terraformVersion: '1.5.7'
 
+    # Step 1: Use AzureCLI@2 ONLY to extract SPN credentials and export them
+    # as pipeline variables. The task automatically runs 'az account clear'
+    # on exit, so the CLI session is gone before Step 2 runs.
     - task: AzureCLI@2
-      displayName: 'Terraform Init and Plan'
+      displayName: 'Extract Azure Credentials'
       inputs:
         azureSubscription: '$(azureServiceConnection)'
         addSpnToEnvironment: true
         scriptType: 'bash'
         scriptLocation: 'inlineScript'
         inlineScript: |
+          echo "##vso[task.setvariable variable=TF_ARM_CLIENT_ID]$servicePrincipalId"
+          echo "##vso[task.setvariable variable=TF_ARM_CLIENT_SECRET;issecret=true]$servicePrincipalKey"
+          echo "##vso[task.setvariable variable=TF_ARM_TENANT_ID]$tenantId"
+          echo "##vso[task.setvariable variable=TF_ARM_SUBSCRIPTION_ID]$(az account show --query id -o tsv)"
+
+    # Step 2: Run Terraform in a plain Bash task with NO active Azure CLI session.
+    # ARM_* env vars are mapped from the pipeline variables set in Step 1.
+    # Terraform authenticates purely via Service Principal env vars.
+    - task: Bash@3
+      displayName: 'Terraform Init and Plan'
+      env:
+        ARM_CLIENT_ID: $(TF_ARM_CLIENT_ID)
+        ARM_CLIENT_SECRET: $(TF_ARM_CLIENT_SECRET)
+        ARM_TENANT_ID: $(TF_ARM_TENANT_ID)
+        ARM_SUBSCRIPTION_ID: $(TF_ARM_SUBSCRIPTION_ID)
+      inputs:
+        targetType: 'inline'
+        script: |
           set -e
-          
-          # Capture credentials and subscription ID while the CLI session is still active
-          export ARM_CLIENT_ID=$servicePrincipalId
-          export ARM_CLIENT_SECRET=$servicePrincipalKey
-          export ARM_TENANT_ID=$tenantId
-          export ARM_SUBSCRIPTION_ID=$(az account show --query id -o tsv)
-          export ARM_USE_CLI=false
-
-          # Log out of the Azure CLI so Terraform cannot fall back to the SPN CLI session.
-          # Terraform only supports CLI auth for User accounts, not Service Principals.
-          # After logout, Terraform will authenticate exclusively via ARM_* env vars above.
-          az logout || true
-          az account clear || true
-
           cd $(terraformWorkingDirectory)
           terraform init -input=false
           terraform fmt -check
@@ -95,27 +102,32 @@ stages:
         artifact: 'tfplan'
         path: '$(terraformWorkingDirectory)'
 
+    # Step 1: Extract SPN credentials for the Apply stage
     - task: AzureCLI@2
-      displayName: 'Terraform Apply'
+      displayName: 'Extract Azure Credentials'
       inputs:
         azureSubscription: '$(azureServiceConnection)'
         addSpnToEnvironment: true
         scriptType: 'bash'
         scriptLocation: 'inlineScript'
         inlineScript: |
+          echo "##vso[task.setvariable variable=TF_ARM_CLIENT_ID]$servicePrincipalId"
+          echo "##vso[task.setvariable variable=TF_ARM_CLIENT_SECRET;issecret=true]$servicePrincipalKey"
+          echo "##vso[task.setvariable variable=TF_ARM_TENANT_ID]$tenantId"
+          echo "##vso[task.setvariable variable=TF_ARM_SUBSCRIPTION_ID]$(az account show --query id -o tsv)"
+
+    # Step 2: Apply using the exact tfplan from the Plan stage (no CLI session active)
+    - task: Bash@3
+      displayName: 'Terraform Apply'
+      env:
+        ARM_CLIENT_ID: $(TF_ARM_CLIENT_ID)
+        ARM_CLIENT_SECRET: $(TF_ARM_CLIENT_SECRET)
+        ARM_TENANT_ID: $(TF_ARM_TENANT_ID)
+        ARM_SUBSCRIPTION_ID: $(TF_ARM_SUBSCRIPTION_ID)
+      inputs:
+        targetType: 'inline'
+        script: |
           set -e
-
-          # Capture credentials and subscription ID while the CLI session is still active
-          export ARM_CLIENT_ID=$servicePrincipalId
-          export ARM_CLIENT_SECRET=$servicePrincipalKey
-          export ARM_TENANT_ID=$tenantId
-          export ARM_SUBSCRIPTION_ID=$(az account show --query id -o tsv)
-          export ARM_USE_CLI=false
-
-          # Log out of the Azure CLI so Terraform cannot fall back to the SPN CLI session.
-          az logout || true
-          az account clear || true
-
           cd $(terraformWorkingDirectory)
           terraform init -input=false
           terraform apply -auto-approve tfplan
