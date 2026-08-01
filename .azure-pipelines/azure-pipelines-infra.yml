@@ -42,6 +42,9 @@ stages:
           export ARM_CLIENT_SECRET=$servicePrincipalKey
           export ARM_TENANT_ID=$tenantId
           export ARM_SUBSCRIPTION_ID=$(az account show --query id -o tsv)
+          
+          # Force Terraform to use the Service Principal env vars instead of the Azure CLI session
+          export ARM_USE_CLI=false
 
           cd $(terraformWorkingDirectory)
           terraform init -input=false
@@ -102,6 +105,9 @@ stages:
           export ARM_CLIENT_SECRET=$servicePrincipalKey
           export ARM_TENANT_ID=$tenantId
           export ARM_SUBSCRIPTION_ID=$(az account show --query id -o tsv)
+          
+          # Force Terraform to use the Service Principal env vars instead of the Azure CLI session
+          export ARM_USE_CLI=false
 
           cd $(terraformWorkingDirectory)
           terraform init -input=false
