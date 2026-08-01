@@ -92,3 +92,4 @@ As this project serves as a baseline for Azure DevOps demonstrations, future enh
 - Secure secrets management via **Azure Key Vault**.
 - CI/CD Pipelines utilizing **Azure DevOps Pipelines**.
 - Centralized telemetry with **Application Insights**.
+# employee-records-management
