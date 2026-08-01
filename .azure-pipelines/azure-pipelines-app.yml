@@ -17,8 +17,6 @@ pool:
 variables:
   - group: Dev
   - name: azureServiceConnection
-    value: 'ACRConnection'
-  - name: dockerRegistryServiceConnection
     value: 'AzureConnection'
   - name: frontendImageName
     value: 'frontend'
@@ -63,29 +61,43 @@ stages:
   jobs:
   - job: BuildAndPush
     steps:
-    - task: Docker@2
+    # Use AzureCLI@2 to authenticate to ACR via the ARM service connection.
+    # az acr login configures the local Docker daemon with a short-lived token,
+    # so no separate Docker Registry service connection is required.
+    - task: AzureCLI@2
       displayName: 'Build & Push Backend Image'
       inputs:
-        containerRegistry: '$(dockerRegistryServiceConnection)'
-        repository: '$(backendImageName)'
-        command: 'buildAndPush'
-        Dockerfile: 'backend/Dockerfile'
-        buildContext: 'backend'
-        arguments: '--label org.opencontainers.image.revision=$(Build.SourceVersion) --label org.opencontainers.image.version=$(Build.BuildId)'
-        tags: |
-          $(tag)
-    
-    - task: Docker@2
+        azureSubscription: '$(azureServiceConnection)'
+        scriptType: 'bash'
+        scriptLocation: 'inlineScript'
+        inlineScript: |
+          set -e
+          az acr login --name $(containerRegistry | cut -d'.' -f1)
+          docker build \
+            --label org.opencontainers.image.revision=$(Build.SourceVersion) \
+            --label org.opencontainers.image.version=$(Build.BuildId) \
+            -t $(containerRegistry)/$(backendImageName):$(tag) \
+            -f backend/Dockerfile \
+            backend/
+          docker push $(containerRegistry)/$(backendImageName):$(tag)
+
+    - task: AzureCLI@2
       displayName: 'Build & Push Frontend Image'
       inputs:
-        containerRegistry: '$(dockerRegistryServiceConnection)'
-        repository: '$(frontendImageName)'
-        command: 'buildAndPush'
-        Dockerfile: 'frontend/Dockerfile'
-        buildContext: 'frontend'
-        arguments: '--build-arg VITE_API_URL=$(backendUrl) --label org.opencontainers.image.revision=$(Build.SourceVersion) --label org.opencontainers.image.version=$(Build.BuildId)'
-        tags: |
-          $(tag)
+        azureSubscription: '$(azureServiceConnection)'
+        scriptType: 'bash'
+        scriptLocation: 'inlineScript'
+        inlineScript: |
+          set -e
+          az acr login --name $(containerRegistry | cut -d'.' -f1)
+          docker build \
+            --build-arg VITE_API_URL=$(backendUrl) \
+            --label org.opencontainers.image.revision=$(Build.SourceVersion) \
+            --label org.opencontainers.image.version=$(Build.BuildId) \
+            -t $(containerRegistry)/$(frontendImageName):$(tag) \
+            -f frontend/Dockerfile \
+            frontend/
+          docker push $(containerRegistry)/$(frontendImageName):$(tag)
 
 - stage: Deploy
   displayName: 'Deploy to Production'
