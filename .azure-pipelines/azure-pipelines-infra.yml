@@ -14,7 +14,7 @@ variables:
   - name: azureServiceConnection
     value: 'AzureConnection'
   - name: terraformWorkingDirectory
-    value: 'terraform/infra'
+    value: '$(System.DefaultWorkingDirectory)/terraform/infra'
 
 stages:
 - stage: TerraformPlan
@@ -24,35 +24,47 @@ stages:
     displayName: 'Init, Validate, and Plan'
     steps:
     - task: TerraformInstaller@1
+      displayName: 'Install Terraform 1.5.7'
       inputs:
         terraformVersion: '1.5.7'
 
-    - task: AzureCLI@2
-      displayName: 'Terraform Init and Plan'
+    - task: TerraformTaskV4@4
+      displayName: 'Terraform Init'
       inputs:
-        azureSubscription: '$(azureServiceConnection)'
-        addSpnToEnvironment: true
-        scriptType: 'bash'
-        scriptLocation: 'inlineScript'
-        inlineScript: |
-          set -e
+        provider: 'azurerm'
+        command: 'init'
+        workingDirectory: '$(terraformWorkingDirectory)'
+        # Backend state storage - TerraformTaskV4 authenticates this automatically
+        backendServiceArm: '$(azureServiceConnection)'
+        backendAzureRmResourceGroupName: 'erboot-tfstate-rg'
+        backendAzureRmStorageAccountName: 'erboottfstate'
+        backendAzureRmContainerName: 'tfstate'
+        backendAzureRmKey: 'prod.terraform.tfstate'
 
-          # Capture credentials and subscription ID while the CLI session is active
-          export ARM_CLIENT_ID=$servicePrincipalId
-          export ARM_CLIENT_SECRET=$servicePrincipalKey
-          export ARM_TENANT_ID=$tenantId
-          export ARM_SUBSCRIPTION_ID=$(az account show --query id -o tsv)
-
-          # Redirect Azure CLI config to a fresh empty temp directory.
-          # Terraform will find no active CLI session and will authenticate
-          # exclusively via the ARM_* environment variables set above.
-          export AZURE_CONFIG_DIR=$(mktemp -d)
-
+    - task: Bash@3
+      displayName: 'Terraform Format Check'
+      inputs:
+        targetType: 'inline'
+        script: |
           cd $(terraformWorkingDirectory)
-          terraform init -input=false
           terraform fmt -check
-          terraform validate
-          terraform plan -input=false -out=tfplan
+
+    - task: TerraformTaskV4@4
+      displayName: 'Terraform Validate'
+      inputs:
+        provider: 'azurerm'
+        command: 'validate'
+        workingDirectory: '$(terraformWorkingDirectory)'
+
+    - task: TerraformTaskV4@4
+      displayName: 'Terraform Plan'
+      inputs:
+        provider: 'azurerm'
+        command: 'plan'
+        workingDirectory: '$(terraformWorkingDirectory)'
+        commandOptions: '-input=false -out=tfplan'
+        # TerraformTaskV4 handles Service Principal auth via the service connection natively
+        environmentServiceNameAzureRM: '$(azureServiceConnection)'
 
     - task: PublishPipelineArtifact@1
       displayName: 'Publish tfplan Artifact'
@@ -64,26 +76,26 @@ stages:
 - stage: TerraformApply
   displayName: 'Terraform Apply'
   dependsOn: TerraformPlan
-  # Only run apply on main branch
   condition: and(succeeded(), eq(variables['Build.SourceBranch'], 'refs/heads/main'))
   jobs:
   - job: WaitForApproval
     displayName: 'Manual Approval'
-    pool: server # Agentless job for manual validation
+    pool: server
     steps:
     - task: ManualValidation@0
       timeoutInMinutes: 60
       inputs:
         notifyUsers: ''
         instructions: 'Please review the Terraform Plan output in the previous stage. Approve to apply the changes.'
-  
+
   - job: Apply
     displayName: 'Apply Infrastructure'
     dependsOn: WaitForApproval
     steps:
     - checkout: self
-    
+
     - task: TerraformInstaller@1
+      displayName: 'Install Terraform 1.5.7'
       inputs:
         terraformVersion: '1.5.7'
 
@@ -93,26 +105,23 @@ stages:
         artifact: 'tfplan'
         path: '$(terraformWorkingDirectory)'
 
-    - task: AzureCLI@2
+    - task: TerraformTaskV4@4
+      displayName: 'Terraform Init'
+      inputs:
+        provider: 'azurerm'
+        command: 'init'
+        workingDirectory: '$(terraformWorkingDirectory)'
+        backendServiceArm: '$(azureServiceConnection)'
+        backendAzureRmResourceGroupName: 'erboot-tfstate-rg'
+        backendAzureRmStorageAccountName: 'erboottfstate'
+        backendAzureRmContainerName: 'tfstate'
+        backendAzureRmKey: 'prod.terraform.tfstate'
+
+    - task: TerraformTaskV4@4
       displayName: 'Terraform Apply'
       inputs:
-        azureSubscription: '$(azureServiceConnection)'
-        addSpnToEnvironment: true
-        scriptType: 'bash'
-        scriptLocation: 'inlineScript'
-        inlineScript: |
-          set -e
-
-          # Capture credentials and subscription ID while the CLI session is active
-          export ARM_CLIENT_ID=$servicePrincipalId
-          export ARM_CLIENT_SECRET=$servicePrincipalKey
-          export ARM_TENANT_ID=$tenantId
-          export ARM_SUBSCRIPTION_ID=$(az account show --query id -o tsv)
-
-          # Redirect Azure CLI config to a fresh empty temp directory.
-          # Terraform will find no active CLI session and authenticate via ARM_* env vars.
-          export AZURE_CONFIG_DIR=$(mktemp -d)
-
-          cd $(terraformWorkingDirectory)
-          terraform init -input=false
-          terraform apply -auto-approve tfplan
+        provider: 'azurerm'
+        command: 'apply'
+        workingDirectory: '$(terraformWorkingDirectory)'
+        commandOptions: '-auto-approve tfplan'
+        environmentServiceNameAzureRM: '$(azureServiceConnection)'
