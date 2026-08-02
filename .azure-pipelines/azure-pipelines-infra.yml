@@ -34,7 +34,6 @@ stages:
         provider: 'azurerm'
         command: 'init'
         workingDirectory: '$(terraformWorkingDirectory)'
-        # Backend state storage - TerraformTaskV4 authenticates this automatically
         backendServiceArm: '$(azureServiceConnection)'
         backendAzureRmResourceGroupName: 'erboot-tfstate-rg'
         backendAzureRmStorageAccountName: 'erboottfstate'
@@ -63,7 +62,6 @@ stages:
         command: 'plan'
         workingDirectory: '$(terraformWorkingDirectory)'
         commandOptions: '-input=false -out=tfplan'
-        # TerraformTaskV4 handles Service Principal auth via the service connection natively
         environmentServiceNameAzureRM: '$(azureServiceConnection)'
 
     - task: PublishPipelineArtifact@1
