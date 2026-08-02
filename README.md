@@ -36,7 +36,8 @@ The application is built using a modern React frontend and a Node.js/Prisma back
 
 > **Note:** To add your own screenshots, edit this file in the GitHub UI and simply drag and drop your images over these placeholders. GitHub will automatically host them and generate the correct links.
 
-![Employee Directory / Dashboard Placeholder](https://via.placeholder.com/800x450?text=Upload+Employee+Directory+Screenshot+Here)
+![Employee Directory / Dashboar<img width="1440" height="900" alt="Screenshot 2026-08-02 at 2 53 35 PM" src="https://github.com/user-attachments/assets/c63c7b90-3e38-44f6-bc7c-458a27b60b06" />
+d Placeholder](https://via.placeholder.com/800x450?text=Upload+Employee+Directory+Screenshot+Here)
 
 ![Employee Profile Placeholder](https://via.placeholder.com/800x450?text=Upload+Employee+Profile+Screenshot+Here)
 
