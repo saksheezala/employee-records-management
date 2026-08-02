@@ -1,4 +1,4 @@
-# 🏢 Employee Records Management
+<img width="1440" height="900" alt="image" src="https://github.com/user-attachments/assets/f3f7e3db-fa35-44e6-9080-ab34bf9e12dd" /># 🏢 Employee Records Management
 
 **Employee Records Management** is an enterprise-grade cloud application designed to manage employee profiles securely.  
 The application is built using a modern React frontend and a Node.js/Prisma backend, deployed entirely on **Microsoft Azure** using **Terraform** (Infrastructure as Code) and **Azure DevOps** for fully automated CI/CD.
@@ -36,12 +36,10 @@ The application is built using a modern React frontend and a Node.js/Prisma back
 
 > **Note:** To add your own screenshots, edit this file in the GitHub UI and simply drag and drop your images over these placeholders. GitHub will automatically host them and generate the correct links.
 
-![Employee Directory / Dashboar<img width="1440" height="900" alt="Screenshot 2026-08-02 at 2 53 35 PM" src="https://github.com/user-attachments/assets/c63c7b90-3e38-44f6-bc7c-458a27b60b06" />
-d Placeholder](https://via.placeholder.com/800x450?text=Upload+Employee+Directory+Screenshot+Here)
+<img width="1440" height="900" alt="Screenshot 2026-08-02 at 2 53 35 PM" src="https://github.com/user-attachments/assets/0738173e-b058-4f6d-9ad6-c208ce446c30" />
 
-![Employee Profile Placeholder](https://via.placeholder.com/800x450?text=Upload+Employee+Profile+Screenshot+Here)
+<img width="1440" height="900" alt="image" src="https://github.com/user-attachments/assets/88c17e8e-3b65-4847-bcc9-709391ceab0b" />
 
-![Azure DevOps CI/CD Pipeline Placeholder](https://via.placeholder.com/800x450?text=Upload+Azure+DevOps+Pipeline+Screenshot+Here)
 
 ---
 
