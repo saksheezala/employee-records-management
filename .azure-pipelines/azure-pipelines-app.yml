@@ -72,14 +72,16 @@ stages:
         scriptLocation: 'inlineScript'
         inlineScript: |
           set -e
-          az acr login --name $(containerRegistry | cut -d'.' -f1)
+          REGISTRY="$(containerRegistry)"
+          ACR_NAME="${REGISTRY%%.*}"   # strips .azurecr.io → erprodacr
+          az acr login --name "$ACR_NAME"
           docker build \
             --label org.opencontainers.image.revision=$(Build.SourceVersion) \
             --label org.opencontainers.image.version=$(Build.BuildId) \
-            -t $(containerRegistry)/$(backendImageName):$(tag) \
+            -t "$REGISTRY/$(backendImageName):$(tag)" \
             -f backend/Dockerfile \
             backend/
-          docker push $(containerRegistry)/$(backendImageName):$(tag)
+          docker push "$REGISTRY/$(backendImageName):$(tag)"
 
     - task: AzureCLI@2
       displayName: 'Build & Push Frontend Image'
@@ -89,15 +91,17 @@ stages:
         scriptLocation: 'inlineScript'
         inlineScript: |
           set -e
-          az acr login --name $(containerRegistry | cut -d'.' -f1)
+          REGISTRY="$(containerRegistry)"
+          ACR_NAME="${REGISTRY%%.*}"   # strips .azurecr.io → erprodacr
+          az acr login --name "$ACR_NAME"
           docker build \
             --build-arg VITE_API_URL=$(backendUrl) \
             --label org.opencontainers.image.revision=$(Build.SourceVersion) \
             --label org.opencontainers.image.version=$(Build.BuildId) \
-            -t $(containerRegistry)/$(frontendImageName):$(tag) \
+            -t "$REGISTRY/$(frontendImageName):$(tag)" \
             -f frontend/Dockerfile \
             frontend/
-          docker push $(containerRegistry)/$(frontendImageName):$(tag)
+          docker push "$REGISTRY/$(frontendImageName):$(tag)"
 
 - stage: Deploy
   displayName: 'Deploy to Production'
