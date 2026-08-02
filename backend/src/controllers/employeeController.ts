@@ -149,7 +149,7 @@ export const getAllEmployees = async (
     });
 
     const employeesWithUrl = await Promise.all(
-      employees.map(async emp => ({
+      employees.map(async (emp: typeof employees[number]) => ({
         ...emp,
         photoUrl: await getFullPhotoUrl(req, emp.photoPath),
       }))
