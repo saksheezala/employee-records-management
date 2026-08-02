@@ -32,6 +32,18 @@ The application is built using a modern React frontend and a Node.js/Prisma back
 
 ---
 
+## 📸 Screenshots
+
+> **Note:** To add your own screenshots, edit this file in the GitHub UI and simply drag and drop your images over these placeholders. GitHub will automatically host them and generate the correct links.
+
+![Employee Directory / Dashboard Placeholder](https://via.placeholder.com/800x450?text=Upload+Employee+Directory+Screenshot+Here)
+
+![Employee Profile Placeholder](https://via.placeholder.com/800x450?text=Upload+Employee+Profile+Screenshot+Here)
+
+![Azure DevOps CI/CD Pipeline Placeholder](https://via.placeholder.com/800x450?text=Upload+Azure+DevOps+Pipeline+Screenshot+Here)
+
+---
+
 ## 🔐 Architecture & Security Highlights
 
 - **Secretless Backend**: The Node.js backend uses a System-Assigned Managed Identity to read secrets directly from Azure Key Vault at runtime.
