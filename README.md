@@ -1,11 +1,11 @@
-<img width="1440" height="900" alt="image" src="https://github.com/user-attachments/assets/f3f7e3db-fa35-44e6-9080-ab34bf9e12dd" /># 🏢 Employee Records Management
+ Employee Records Management
 
 **Employee Records Management** is an enterprise-grade cloud application designed to manage employee profiles securely.  
 The application is built using a modern React frontend and a Node.js/Prisma backend, deployed entirely on **Microsoft Azure** using **Terraform** (Infrastructure as Code) and **Azure DevOps** for fully automated CI/CD.
 
 ---
 
-## 🧰 Tech Stack & Azure Services Used
+## Tech Stack & Azure Services Used
 
 - **Frontend:** React, Vite, TypeScript
 - **Backend:** Node.js, Express, Prisma, PostgreSQL
@@ -21,7 +21,7 @@ The application is built using a modern React frontend and a Node.js/Prisma back
 
 ---
 
-## 🚀 Features
+## Features
 
 - **Employee Directory**: View, add, edit, and manage employee profiles.
 - **Profile Photo Management**: Secure image upload and retrieval using time-limited SAS tokens.
@@ -32,7 +32,7 @@ The application is built using a modern React frontend and a Node.js/Prisma back
 
 ---
 
-## 📸 Screenshots
+## Screenshots
 
 <img width="1440" height="900" alt="Screenshot 2026-08-02 at 2 53 35 PM" src="https://github.com/user-attachments/assets/0738173e-b058-4f6d-9ad6-c208ce446c30" />
 
@@ -41,7 +41,7 @@ The application is built using a modern React frontend and a Node.js/Prisma back
 
 ---
 
-## 🔐 Architecture & Security Highlights
+##  Architecture & Security Highlights
 
 - **Secretless Backend**: The Node.js backend uses a System-Assigned Managed Identity to read secrets directly from Azure Key Vault at runtime.
 - **Secure Storage**: The profile photo Blob Storage is completely locked down from public access (`allow_nested_items_to_be_public = false`). The backend generates time-limited **SAS (Shared Access Signature)** tokens for the frontend to securely render images.
@@ -49,7 +49,7 @@ The application is built using a modern React frontend and a Node.js/Prisma back
 
 ---
 
-## 🛠️ How It Works (DevOps Workflow)
+##  How It Works (DevOps Workflow)
 
 1. **Infrastructure Pipeline**: A developer merges Terraform code. Azure DevOps runs `terraform init`, `validate`, `plan`, and waits for manual approval. Upon approval, it runs `terraform apply` to provision Azure resources.
    
@@ -68,7 +68,7 @@ The application is built using a modern React frontend and a Node.js/Prisma back
 
 ---
 
-## 📋 Prerequisites
+##  Prerequisites
 
 - **Microsoft Azure Account**
 - **Azure DevOps Organization**
@@ -79,7 +79,7 @@ The application is built using a modern React frontend and a Node.js/Prisma back
 
 ---
 
-## ⚙️ Setup Instructions
+##  Setup Instructions
 
 1. **Bootstrap Terraform State**
    - Navigate to `terraform/bootstrap`
