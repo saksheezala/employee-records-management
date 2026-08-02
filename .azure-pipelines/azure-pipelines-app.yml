@@ -61,9 +61,6 @@ stages:
   jobs:
   - job: BuildAndPush
     steps:
-    # Use AzureCLI@2 to authenticate to ACR via the ARM service connection.
-    # az acr login configures the local Docker daemon with a short-lived token,
-    # so no separate Docker Registry service connection is required.
     - task: AzureCLI@2
       displayName: 'Build & Push Backend Image'
       inputs:
