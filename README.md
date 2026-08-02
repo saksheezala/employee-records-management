@@ -34,8 +34,6 @@ The application is built using a modern React frontend and a Node.js/Prisma back
 
 ## 📸 Screenshots
 
-> **Note:** To add your own screenshots, edit this file in the GitHub UI and simply drag and drop your images over these placeholders. GitHub will automatically host them and generate the correct links.
-
 <img width="1440" height="900" alt="Screenshot 2026-08-02 at 2 53 35 PM" src="https://github.com/user-attachments/assets/0738173e-b058-4f6d-9ad6-c208ce446c30" />
 
 <img width="1440" height="900" alt="image" src="https://github.com/user-attachments/assets/88c17e8e-3b65-4847-bcc9-709391ceab0b" />
@@ -54,10 +52,19 @@ The application is built using a modern React frontend and a Node.js/Prisma back
 ## 🛠️ How It Works (DevOps Workflow)
 
 1. **Infrastructure Pipeline**: A developer merges Terraform code. Azure DevOps runs `terraform init`, `validate`, `plan`, and waits for manual approval. Upon approval, it runs `terraform apply` to provision Azure resources.
-2. **Application Pipeline**: A developer merges application code. The pipeline builds the Node.js/React code, runs `oxlint` and TypeScript checks, builds Docker images, and authenticates to ACR using native `az acr login`.
-3. **Database Migration**: The pipeline fetches the DB password from Key Vault via Azure DevOps native tasks and runs `prisma migrate deploy` securely.
-4. **Deployment**: The Docker images are pushed to ACR, and Azure App Service is updated to pull the latest image tags.
-5. **Health Check**: The pipeline continuously polls the `/health` endpoint until the new containers are successfully running.
+   
+   <img width="681" height="249" alt="image" src="https://github.com/user-attachments/assets/142e15f3-f720-4560-804e-54821a1f10bc" />
+
+3. **Application Pipeline**: A developer merges application code. The pipeline builds the Node.js/React code, runs `oxlint` and TypeScript checks, builds Docker images, and authenticates to ACR using native `az acr login`.
+   
+   <img width="1105" height="214" alt="image" src="https://github.com/user-attachments/assets/b0d97a20-b6c6-4fe6-b972-a8d2332d7309" />
+
+5. **Database Migration**: The pipeline fetches the DB password from Key Vault via Azure DevOps native tasks and runs `prisma migrate deploy` securely.
+6. **Deployment**: The Docker images are pushed to ACR, and Azure App Service is updated to pull the latest image tags.
+
+   <img width="1440" height="814" alt="image" src="https://github.com/user-attachments/assets/62dcbeb8-5d38-4e2b-90a7-f7ec097f1d52" />
+
+8. **Health Check**: The pipeline continuously polls the `/health` endpoint until the new containers are successfully running.
 
 ---
 
@@ -91,12 +98,3 @@ The application is built using a modern React frontend and a Node.js/Prisma back
 4. **Deploy Application**
    - Import `.azure-pipelines/azure-pipelines-app.yml` into Azure DevOps.
    - Run the pipeline to build Docker images, run Prisma migrations, and deploy the code to Azure App Service.
-
----
-
-## 📈 Future Improvements
-
-- **CDN Integration**: Place an Azure Front Door or Azure CDN in front of the frontend web app for global caching.
-- **VNet Injection**: Isolate the App Service and PostgreSQL database within a private Virtual Network (VNet) using Private Endpoints.
-- **Automated Testing**: Add end-to-end (E2E) UI testing using Playwright in the CI pipeline.
-- **OIDC Authentication**: Migrate the Azure DevOps Service Connection from client secrets to Workload Identity Federation (WIF) for a completely secretless CI/CD flow.
