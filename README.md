@@ -1,95 +1,91 @@
-# Employee Records Management System
+# 🏢 Employee Records Management
 
-## Project Overview
-The Employee Records Management System is a clean, production-quality CRUD application designed to serve as a foundation for demonstrating enterprise Azure DevOps practices. It provides role-based access for Administrators to manage employee records, and for Employees to manage their personal profiles.
+**Employee Records Management** is an enterprise-grade cloud application designed to manage employee profiles securely.  
+The application is built using a modern React frontend and a Node.js/Prisma backend, deployed entirely on **Microsoft Azure** using **Terraform** (Infrastructure as Code) and **Azure DevOps** for fully automated CI/CD.
 
-## Features
-- **Role-Based Access Control (RBAC)**: Distinct permissions for `ADMIN` and `EMPLOYEE` roles.
-- **Authentication**: Secure JWT-based authentication with bcrypt password hashing.
-- **Admin Dashboard**: Full CRUD capabilities for managing employee records, including real-time search filtering.
-- **Employee Self-Service**: Employees can view and update their own personal information securely.
-- **Profile Photo Uploads**: Both admins and employees can upload profile pictures, validated and stored securely.
-- **Responsive UI**: A modern, clean frontend built with React and Tailwind CSS.
-- **Centralized Error Handling**: Standardized API error responses and user-friendly UI notifications.
+---
 
-## Technology Stack
-**Backend**:
-- Node.js & Express
-- TypeScript
-- PostgreSQL (Database)
-- Prisma (ORM)
-- JWT (Authentication)
-- Zod (Validation)
-- Multer (File Uploads)
+## 🧰 Tech Stack & Azure Services Used
 
-**Frontend**:
-- React & Vite
-- TypeScript
-- Tailwind CSS v4
-- React Router
-- Axios
-- Lucide React (Icons)
+- **Frontend:** React, Vite, TypeScript
+- **Backend:** Node.js, Express, Prisma, PostgreSQL
+- **Azure App Service (Linux Web App)** – Hosts the Dockerized frontend and backend APIs
+- **Azure Database for PostgreSQL (Flexible Server)** – Relational database for employee records
+- **Azure Blob Storage** – Secure storage for employee profile photos
+- **Azure Key Vault** – Centralized secrets management (DB passwords, JWT secrets)
+- **Azure Container Registry (ACR)** – Private registry for Docker images
+- **Azure Managed Identities & RBAC** – Passwordless secure authentication between Azure services
+- **Azure Application Insights & Log Analytics** – Telemetry, logging, and application monitoring
+- **Terraform** – Infrastructure provisioning and state management
+- **Azure DevOps** – CI/CD pipelines for infrastructure and application code
 
-## Project Structure
-```text
-project1/
-├── backend/            # Express REST API
-│   ├── prisma/         # Database schema & migrations
-│   ├── src/
-│   │   ├── controllers/# Route handlers
-│   │   ├── middlewares/# Auth, Error, Upload logic
-│   │   ├── routes/     # API route definitions
-│   │   ├── utils/      # Helpers (Prisma Client)
-│   │   └── validations/# Zod schemas
-├── frontend/           # React SPA
-│   ├── src/
-│   │   ├── components/ # Reusable UI components & layouts
-│   │   ├── contexts/   # Global state (AuthContext)
-│   │   ├── pages/      # Route pages (Login, Dashboard, Profile)
-│   │   └── services/   # Axios configuration
-├── docs/               # Documentation
-└── docker-compose.yml  # Multi-container orchestration
-```
+---
 
-## Environment Variables
-The application relies on the following environment variables:
+## 🚀 Features
 
-**Backend (`backend/.env`)**:
-- `DATABASE_URL`: Connection string for PostgreSQL.
-- `PORT`: Server port (default 3000).
-- `JWT_SECRET`: Secret key for signing tokens.
+- **Employee Directory**: View, add, edit, and manage employee profiles.
+- **Profile Photo Management**: Secure image upload and retrieval using time-limited SAS tokens.
+- **Enterprise Security**: Zero-trust architecture using Managed Identities (no hardcoded passwords in configuration files).
+- **Fully Automated CI/CD**: Two-stage pipelines (Infrastructure & Application) built with Azure DevOps.
+- **Containerized Workloads**: Microservices packaged as Docker containers.
+- **Infrastructure as Code**: 100% of the Azure infrastructure is defined and version-controlled in Terraform.
 
-**Frontend (`frontend/.env` optional)**:
-- `VITE_API_URL`: Base URL of the backend API.
+---
 
-## Local Setup
-1. **Clone the repository.**
-2. **Setup Backend**:
-   - Navigate to `backend/` and run `npm install`.
-   - Configure your `.env` with a local PostgreSQL connection.
-   - Run `npx prisma migrate dev` and `npm run seed`.
-   - Start the server with `npm run dev`.
-3. **Setup Frontend**:
-   - Navigate to `frontend/` and run `npm install`.
-   - Start the dev server with `npm run dev`.
+## 🔐 Architecture & Security Highlights
 
-## Docker Setup
-To run the entire application stack (PostgreSQL, Backend, Frontend) via Docker Compose:
-```bash
-docker-compose up -d --build
-```
-- Frontend will be accessible at `http://localhost:5173`
-- Backend will be accessible at `http://localhost:3000`
+- **Secretless Backend**: The Node.js backend uses a System-Assigned Managed Identity to read secrets directly from Azure Key Vault at runtime.
+- **Secure Storage**: The profile photo Blob Storage is completely locked down from public access (`allow_nested_items_to_be_public = false`). The backend generates time-limited **SAS (Shared Access Signature)** tokens for the frontend to securely render images.
+- **CI/CD RBAC Enforcement**: The Azure DevOps Service Principal is granted specific, least-privilege roles (e.g., `User Access Administrator`, `Storage Account Contributor`) to execute Terraform runs safely without needing global subscription Owner rights.
 
-## API Documentation
-Complete API documentation for the backend endpoints can be found in [docs/api.md](./docs/api.md).
+---
 
-## Future Improvements
-As this project serves as a baseline for Azure DevOps demonstrations, future enhancements will include:
-- Migrating local file uploads to **Azure Blob Storage**.
-- Container orchestration via **Azure App Service** or **AKS**.
-- Infrastructure as Code (IaC) using **Terraform**.
-- Secure secrets management via **Azure Key Vault**.
-- CI/CD Pipelines utilizing **Azure DevOps Pipelines**.
-- Centralized telemetry with **Application Insights**.
-# employee-records-management
+## 🛠️ How It Works (DevOps Workflow)
+
+1. **Infrastructure Pipeline**: A developer merges Terraform code. Azure DevOps runs `terraform init`, `validate`, `plan`, and waits for manual approval. Upon approval, it runs `terraform apply` to provision Azure resources.
+2. **Application Pipeline**: A developer merges application code. The pipeline builds the Node.js/React code, runs `oxlint` and TypeScript checks, builds Docker images, and authenticates to ACR using native `az acr login`.
+3. **Database Migration**: The pipeline fetches the DB password from Key Vault via Azure DevOps native tasks and runs `prisma migrate deploy` securely.
+4. **Deployment**: The Docker images are pushed to ACR, and Azure App Service is updated to pull the latest image tags.
+5. **Health Check**: The pipeline continuously polls the `/health` endpoint until the new containers are successfully running.
+
+---
+
+## 📋 Prerequisites
+
+- **Microsoft Azure Account**
+- **Azure DevOps Organization**
+- **Azure CLI** installed locally
+- **Terraform** (`>= 1.5.7`) installed locally
+- **Docker** installed locally
+- **Node.js** (`20.x`) and `npm`
+
+---
+
+## ⚙️ Setup Instructions
+
+1. **Bootstrap Terraform State**
+   - Navigate to `terraform/bootstrap`
+   - Run `terraform init` and `terraform apply` to create the remote state storage account.
+   - Run the provided `az role assignment create` commands to grant your Azure DevOps Service Principal the `Storage Account Contributor` and `User Access Administrator` roles.
+
+2. **Configure Azure DevOps**
+   - Create an ARM Service Connection (e.g., `AzureConnection`) in Azure DevOps.
+   - Link the Service Connection to the Service Principal.
+   - Install the **Terraform by Microsoft DevLabs** extension in your Azure DevOps organization.
+
+3. **Deploy Infrastructure**
+   - Import `.azure-pipelines/azure-pipelines-infra.yml` into Azure DevOps.
+   - Run the pipeline to provision the Resource Group, PostgreSQL, Key Vault, Storage, ACR, App Services, and Application Insights.
+
+4. **Deploy Application**
+   - Import `.azure-pipelines/azure-pipelines-app.yml` into Azure DevOps.
+   - Run the pipeline to build Docker images, run Prisma migrations, and deploy the code to Azure App Service.
+
+---
+
+## 📈 Future Improvements
+
+- **CDN Integration**: Place an Azure Front Door or Azure CDN in front of the frontend web app for global caching.
+- **VNet Injection**: Isolate the App Service and PostgreSQL database within a private Virtual Network (VNet) using Private Endpoints.
+- **Automated Testing**: Add end-to-end (E2E) UI testing using Playwright in the CI pipeline.
+- **OIDC Authentication**: Migrate the Azure DevOps Service Connection from client secrets to Workload Identity Federation (WIF) for a completely secretless CI/CD flow.
